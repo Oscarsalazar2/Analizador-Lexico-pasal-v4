@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Analizador Léxico Pascal</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="contenedor">
+      <h1>Analizador Léxico Pascal</h1>
+      <div class="letras">
+      Creado por Oscar Salazar y Ximena Amador
+      </div>
+
+      <textarea
+        id="codigo"
+        placeholder="Pega o carga un archivo .pas aquí..."
+      ></textarea>
+
+      <div class="controles">
+        <button id="btnAnalizar">Analizar</button>
+        <button id="btnCargarEjemplo" class="ghost">Cargar ejemplo</button>
+        <button id="btnLimpiar" class="ghost">Limpiar</button>
+        <input id="fileInput" type="file" accept=".pas" style="display: none" />
+        <button id="btnCargasPas" class="ghost">Cargar .pas</button>
+        <button id="btnDescargar" class="ghost">Descargar .lex</button>
+        <button id="btnListaCodigos" class="ghost">Ver lista de números</button>
+      </div>
+
+      <table aria-live="polite">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Línea:Col</th>
+            <th>Token</th>
+            <th>Lexema</th>
+            <th>Digito</th>
+          </tr>
+        </thead>
+        <tbody id="tokensBody">
+          <tr>
+            <td colspan="5" class="letras">
+              Presiona <strong>Analizar</strong> para generar tokens.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="modalCodigos" class="modal">
+  <div class="modal-content">
+    <span id="cerrarModal" class="close">&times;</span>
+    <h3>Tabla de números de token</h3>
+
+    <!-- scroll -->
+    <div class="tabla-scroll">
+      <table id="tablaCodigos">
+        <thead>
+          <tr>
+            <th>Numero</th>
+            <th>Token</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+    <script src="main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,166 @@
+body {
+        font-family: Inter, system-ui, Arial;
+        margin: 18px;
+        background: #f7fafc;
+        color: #0b1220;
+      }
+      .contenedor {
+        max-width: 980px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.3rem;
+        margin-bottom: 8px;
+      }
+      textarea {
+        width: 100%;
+        height: 260px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        border-radius: 8px;
+        border: 1px solid #d6e0ee;
+        background: #ffffff;
+        box-sizing: border-box;
+      }
+      .controles {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button.ghost {
+        background: #e6eefc;
+        color: #0944b3;
+        border: 1px solid #cde0ff;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #eef3fb;
+        text-align: left;
+        font-size: 0.92rem;
+      }
+      th {
+        background: #f1f7ff;
+        color: #0b2b5a;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+      }
+      .letras {
+        color: #6b7b95;
+        font-size: 0.9rem;
+        margin-top: 8px;
+      }
+      pre {
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .modal {
+  display: none; /* oculto por defecto */
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+}
+.modal-content {
+  background: white;
+  padding: 20px;
+  margin: 10% auto;
+  width: 350px;
+  border-radius: 8px;
+}
+.close {
+  float: right;
+  font-size: 22px;
+  cursor: pointer;
+}
+#tablaCodigos {
+  overflow: auto;
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+#tablaCodigos th, #tablaCodigos td {
+  border: 1px solid #ddd;
+  padding: 6px;
+  text-align: left;
+}
+#tablaCodigos th {
+  background: #f1f1f1;
+}
+.tabla-scroll {
+  max-height: 300px;   /* altura máxima visible */
+  overflow-y: auto;    /* scroll vertical */
+  margin-top: 10px;
+  border: 1px solid #ccc;
+}
+
+#modalErrores {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 10000;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10vh;
+}
+
+#modalErrores .modal-box {
+  background: #fff;
+  width: min(640px, 92vw);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.2);
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  font: 14px/1.5 system-ui, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+#modalErrores .modal-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#modalErrores .modal-header button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: red;
+  cursor: pointer;
+}
+
+#modalErroresContent {
+  max-height: 50vh;
+  overflow: auto;
+  padding: 10px 12px;
+}
+
+#modalErroresContent .error-item {
+  margin: 6px 0;
+  padding: 8px;
+  border: 1px solid #f2c2c2;
+  background: #fff5f5;
+  border-radius: 8px;
+}
