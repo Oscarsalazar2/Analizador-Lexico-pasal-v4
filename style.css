@@ -1,85 +1,132 @@
+/* ===== Base ===== */
 body {
-        font-family: Inter, system-ui, Arial;
-        margin: 18px;
-        background: #f7fafc;
-        color: #0b1220;
-      }
-      .contenedor {
-        max-width: 980px;
-        margin: 0 auto;
-      }
-      h1 {
-        font-size: 1.3rem;
-        margin-bottom: 8px;
-      }
-      textarea {
-        width: 100%;
-        height: 260px;
-        padding: 12px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        border-radius: 8px;
-        border: 1px solid #d6e0ee;
-        background: #ffffff;
-        box-sizing: border-box;
-      }
-      .controles {
-        margin-top: 10px;
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      button {
-        padding: 8px 12px;
-        border: 0;
-        border-radius: 8px;
-        background: #2563eb;
-        color: #fff;
-        cursor: pointer;
-        font-weight: 600;
-      }
-      button.ghost {
-        background: #e6eefc;
-        color: #0944b3;
-        border: 1px solid #cde0ff;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 14px;
-        background: #fff;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-      th,
-      td {
-        padding: 8px 10px;
-        border-bottom: 1px solid #eef3fb;
-        text-align: left;
-        font-size: 0.92rem;
-      }
-      th {
-        background: #f1f7ff;
-        color: #0b2b5a;
-        font-weight: 700;
-        position: sticky;
-        top: 0;
-      }
-      .letras {
-        color: #6b7b95;
-        font-size: 0.9rem;
-        margin-top: 8px;
-      }
-      pre {
-        margin: 0;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      }
+  font-family: Inter, system-ui, Arial;
+  margin: 18px;
+  background: #f7fafc;
+  color: #0b1220;
+}
+.contenedor {
+  max-width: 980px;
+  margin: 0 auto;
+}
+h1 {
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+}
+textarea {
+  width: 100%;
+  height: 260px;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  border-radius: 8px;
+  border: 1px solid #d6e0ee;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+.controles {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+button {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+button.ghost {
+  background: #e6eefc;
+  color: #0944b3;
+  border: 1px solid #cde0ff;
+}
 
-      .modal {
-  display: none; /* oculto por defecto */
+.letras {
+  color: #6b7b95;
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+/* Importante: el <pre> del Lexema debe cortar líneas */
+pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap; /* <-- permite saltos de línea */
+  word-break: break-word; /* <-- corta palabras largas */
+}
+
+/* ===== Tabla de tokens ===== */
+.table-wrapper {
+  max-width: 100%;
+  overflow-x: auto; /* por si en pantallas chicas no cabe */
+}
+
+table {
+  width: 100%;
+  table-layout: fixed; /* columnas con ancho fijo */
+  border-collapse: collapse;
+  margin-top: 14px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th,
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eef3fb;
+  text-align: left;
+  font-size: 0.92rem;
+  white-space: normal; /* permite multi-línea */
+  word-break: break-word; /* evita desbordes */
+}
+
+th {
+  background: #f1f7ff;
+  color: #0b2b5a;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+}
+
+/* Anchos recomendados por columna (#, L:C, Token, Lexema, Dígito, Mensaje) */
+th:nth-child(1),
+td:nth-child(1) {
+  width: 44px;
+} /* # */
+th:nth-child(2),
+td:nth-child(2) {
+  width: 96px;
+} /* Línea:Col */
+th:nth-child(3),
+td:nth-child(3) {
+  width: 140px;
+} /* Token */
+th:nth-child(4),
+td:nth-child(4) {
+  width: 220px;
+} /* Lexema */
+th:nth-child(5),
+td:nth-child(5) {
+  width: 84px;
+} /* Dígito */
+th:nth-child(6),
+td:nth-child(6) {
+  width: auto;
+} /* Mensaje (flexible) */
+
+/* ===== Modal de códigos ===== */
+.modal {
+  display: none;
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
 }
 .modal-content {
   background: white;
@@ -99,7 +146,8 @@ body {
   border-collapse: collapse;
   margin-top: 10px;
 }
-#tablaCodigos th, #tablaCodigos td {
+#tablaCodigos th,
+#tablaCodigos td {
   border: 1px solid #ddd;
   padding: 6px;
   text-align: left;
@@ -108,33 +156,32 @@ body {
   background: #f1f1f1;
 }
 .tabla-scroll {
-  max-height: 300px;   /* altura máxima visible */
-  overflow-y: auto;    /* scroll vertical */
+  max-height: 300px;
+  overflow-y: auto;
   margin-top: 10px;
   border: 1px solid #ccc;
 }
 
+/* ===== Modal de errores (si lo usas) ===== */
 #modalErrores {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.35);
+  background: rgba(0, 0, 0, 0.35);
   z-index: 10000;
   display: none;
   align-items: flex-start;
   justify-content: center;
   padding-top: 10vh;
 }
-
 #modalErrores .modal-box {
   background: #fff;
   width: min(640px, 92vw);
   border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0,0,0,.2);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   border: 1px solid #e5e7eb;
   font: 14px/1.5 system-ui, Segoe UI, Roboto, Arial, sans-serif;
 }
-
 #modalErrores .modal-header {
   padding: 10px 12px;
   border-bottom: 1px solid #eee;
@@ -142,7 +189,6 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-
 #modalErrores .modal-header button {
   padding: 6px 10px;
   border-radius: 8px;
@@ -150,17 +196,84 @@ body {
   background: red;
   cursor: pointer;
 }
-
 #modalErroresContent {
   max-height: 50vh;
   overflow: auto;
   padding: 10px 12px;
 }
-
 #modalErroresContent .error-item {
   margin: 6px 0;
   padding: 8px;
   border: 1px solid #f2c2c2;
   background: #fff5f5;
   border-radius: 8px;
+}
+
+/* ===== Coloreado de filas con error ===== */
+tr.error-row td {
+  color: #e60606;
+  font-weight: bold;
+}
+.error-msg {
+  color: #e40808;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* ===== CodeMirror tema "pascalLight" ===== */
+.cm-s-pascalLight.CodeMirror {
+  height: 260px;
+  border: 1px solid #d6e0ee;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.cm-s-pascalLight .CodeMirror-gutters {
+  background: #f1f7ff;
+  border-right: 1px solid #e6eefc;
+  color: #0b2b5a;
+}
+.cm-s-pascalLight .CodeMirror-linenumber {
+  color: #6b7b95;
+}
+.cm-s-pascalLight .cm-keyword {
+  color: #0944b3;
+  font-weight: 700;
+}
+.cm-s-pascalLight .cm-def {
+  color: #2563eb;
+}
+.cm-s-pascalLight .cm-variable {
+  color: #0b1220;
+}
+.cm-s-pascalLight .cm-comment {
+  color: #6b7b95;
+  font-style: italic;
+}
+.cm-s-pascalLight .cm-string {
+  color: #0f766e;
+}
+.cm-s-pascalLight .cm-number {
+  color: #b45309;
+}
+.cm-s-pascalLight .cm-operator {
+  color: #334155;
+}
+.cm-s-pascalLight .cm-builtin {
+  color: #7c3aed;
+}
+
+/* Marcas de error en editor */
+.cm-lex-error {
+  background: #ffd8d8;
+  outline: 1px solid #ff8a8a;
+  border-radius: 3px;
+}
+.cm-pre-error .CodeMirror-linebackground {
+  background: #fff1f1;
+}
+.CodeMirror-linebackground.cm-error-line {
+  background: rgba(255, 0, 0, 0.25);
 }
