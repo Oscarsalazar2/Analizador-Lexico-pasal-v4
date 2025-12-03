@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     cmLineClasses = [];
   }
+
   function markErrorsInEditor(tokens, allErrs) {
     clearEditorMarks();
     // Marcas por tokens de error (rango exacto)
@@ -38,8 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (
         t.type === "ERROR" &&
         typeof t.lexeme === "string" &&
-        t.lexeme !== "<prevalidación>" &&
-        t.lexeme !== "<postvalidación>"
+        t.lexeme !== "<prevalidación>"
       ) {
         const line0 = t.line - 1;
         const ch0 = t.column - 1;
@@ -669,6 +669,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return src.length;
   }
+
   function patchLeadingDotNumbers(src) {
     const re = /(^|[^.\d])\.(\d+(?:[eE][+-]?\d+)?)/g;
     let code = "",
@@ -706,6 +707,7 @@ document.addEventListener("DOMContentLoaded", () => {
     iOrig += tail.length;
     return { codePatched: code, patchMap: map };
   }
+
   function tokenizarPatched(codigoOriginal) {
     const { codePatched, patchMap } = patchLeadingDotNumbers(codigoOriginal);
     const tokens = tokenizarBase(codePatched);
@@ -753,6 +755,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ========= Utilidades =========
+  function tipoSemanticoDeToken(t) {
+    if (!t) return null;
+
+    if (
+      t.type === "NUMERO_ENTERO" ||
+      t.type === "NUMERO_BIN" ||
+      t.type === "NUMERO_OCT" ||
+      t.type === "NUMERO_HEX"
+    ) {
+      return "integer";
+    }
+    if (t.type === "NUMERO_REAL") {
+      return "real";
+    }
+    if (t.type === "CADENA") {
+      return "string";
+    }
+    if (t.type === "CHAR") {
+      return "char";
+    }
+    if (t.type === "PALABRA_RESERVADAS") {
+      const l = String(t.lexeme).toLowerCase();
+      if (l === "true" || l === "false") return "boolean";
+    }
+    return null; // identificadores u otros
+  }
+
   function indexToLineCol(str, idx) {
     let line = 1,
       col = 1;
@@ -1023,16 +1052,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Operadores prohibidos
     const reBadOps = /\+\+|--|\*\*|==|&&|\|\||:=:/g;
-    // ...
     const reTripleDots = /\.\.\.(?!\.)/g;
-    // Charcode dec/hex
     const reCharDec = /#(\d+)/g;
     const reCharHex = /#\$([0-9A-Fa-f]+)/g;
-    // Strings (para detectar barras invertidas dentro)
     const reString = /'((?:''|[^'])*)'/g;
-    // Identificadores MUY largos
     const reTooLongId = /\b[A-Za-z_][A-Za-z0-9_]{63,}\b/g;
-    // Números con _
     const reNumUnders = /\b\d[\d_]*_\d[\d_]*\b/g;
 
     const scan = (re, text, fn) => {
@@ -1158,6 +1182,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return out;
   }
+
   function dedupeErrorTokens(tokens) {
     const seen = new Set(),
       out = [];
@@ -1171,6 +1196,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return out;
   }
+
   function sortTokensForDisplay(tokens) {
     return [...tokens].sort((a, b) => {
       const ae = a.type === "ERROR" ? 0 : 1;
@@ -1209,6 +1235,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .join("");
   }
+
   function renderErrores(errs) {
     const box = $("erroresBox");
     if (!box) return;
@@ -1222,62 +1249,406 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
   }
 
+  
+
+  // ========= Analizador semántico =========
+  function analizarSemantica(tokens) {
+  const errores = [];
+  const simbolos = new Map(); // nombreLower -> { type, line, column }
+  let enSeccionVar = false;
+  let beginPrincipalVisto = false;
+
+  const toLower = (s) => String(s || "").toLowerCase();
+
+  // ========= Helpers de tipos =========
+  function normalizarTipoNombre(tok) {
+    if (!tok) return null;
+    const lx = toLower(tok.lexeme);
+    if (lx === "integer") return "integer";
+    if (lx === "real") return "real";
+    if (lx === "boolean") return "boolean";
+    if (lx === "char") return "char";
+    if (lx === "string") return "string";
+    // tipos definidos por el usuario u otros
+    return lx || null;
+  }
+
+  function tipoDesdeTokenValor(tok) {
+    if (!tok) return null;
+
+    if (
+      tok.type === "NUMERO_ENTERO" ||
+      tok.type === "NUMERO_HEX" ||
+      tok.type === "NUMERO_BIN" ||
+      tok.type === "NUMERO_OCT"
+    ) {
+      return "integer";
+    }
+    if (tok.type === "NUMERO_REAL") {
+      return "real";
+    }
+    if (tok.type === "CADENA") {
+      return "string";
+    }
+    if (tok.type === "PALABRA_RESERVADAS") {
+      const lx = toLower(tok.lexeme);
+      if (lx === "true" || lx === "false") return "boolean";
+    }
+    if (tok.type === "IDENTIFICADOR") {
+      const lx = toLower(tok.lexeme);
+      const sim = simbolos.get(lx);
+      return sim ? sim.type : null;
+    }
+
+    return null;
+  }
+
+  function registrarError(line, column, msg, lexeme) {
+    errores.push({
+      line: line || 0,
+      column: column || 0,
+      msg: msg,
+      lexeme: lexeme || ""
+    });
+  }
+
+  // ========= 1) PRIMERA PASADA: recolectar variables en sección VAR =========
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+
+    if (t.type === "PALABRA_RESERVADAS") {
+      const lx = toLower(t.lexeme);
+      if (lx === "var") {
+        enSeccionVar = true;
+        continue;
+      }
+      if (lx === "begin") {
+        // termina la sección VAR
+        enSeccionVar = false;
+        // no marcamos todavía beginPrincipalVisto; eso lo hacemos en la segunda pasada
+        continue;
+      }
+    }
+
+    if (!enSeccionVar) continue;
+
+    // Esperamos una declaración del tipo:
+    //   x, y, z: integer;
+    if (t.type === "IDENTIFICADOR") {
+      // 1) Lista de identificadores separados por comas
+      const nombres = [];
+      let j = i;
+      while (j < tokens.length && tokens[j].type === "IDENTIFICADOR") {
+        nombres.push(tokens[j]);
+        j++;
+        if (j < tokens.length && tokens[j].type === "COMA") {
+          j++; // saltar la coma y seguir
+        } else {
+          break;
+        }
+      }
+
+      // 2) Debe venir DOS_PUNTOS
+      if (j >= tokens.length || tokens[j].type !== "DOS_PUNTOS") {
+        // declaración rara, no hacemos nada
+        i = j;
+        continue;
+      }
+      j++;
+
+      // 3) Tipo
+      if (j >= tokens.length) {
+        i = j;
+        continue;
+      }
+      const tokTipo = tokens[j];
+      const tipo = normalizarTipoNombre(tokTipo);
+      j++;
+
+      // 4) Terminar en PUNTO_COMA (opcional para robustez)
+      while (j < tokens.length && tokens[j].type !== "PUNTO_COMA") {
+        j++;
+      }
+
+      // Registrar símbolos
+      for (const idTok of nombres) {
+        const nombre = String(idTok.lexeme);
+        const nombreLower = toLower(nombre);
+
+        if (simbolos.has(nombreLower)) {
+          const prev = simbolos.get(nombreLower);
+          registrarError(
+            idTok.line,
+            idTok.column,
+            `Identificador "${nombre}" declarado más de una vez (primero en L${prev.line}:C${prev.column}).`,
+            nombre
+          );
+        } else {
+          simbolos.set(nombreLower, {
+            type: tipo || "desconocido",
+            line: idTok.line,
+            column: idTok.column
+          });
+        }
+      }
+
+      i = j;
+    }
+  }
+
+  // ========= 2) SEGUNDA PASADA: uso de variables y asignaciones =========
+  let dentroCodigo = false;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+
+    if (t.type === "PALABRA_RESERVADAS") {
+      const lx = toLower(t.lexeme);
+      if (lx === "begin" && !beginPrincipalVisto) {
+        beginPrincipalVisto = true;
+        dentroCodigo = true;
+        continue;
+      }
+    }
+
+    if (!dentroCodigo) continue;
+
+    // Caso: IDENTIFICADOR := expr
+    if (t.type === "IDENTIFICADOR") {
+      const nombre = String(t.lexeme);
+      const nombreLower = toLower(nombre);
+      const siguiente = tokens[i + 1];
+
+      // 2.1 Asignación
+      if (siguiente && siguiente.type === "ASIGNACION") {
+        const tokAsign = siguiente;
+
+        const simbolo = simbolos.get(nombreLower);
+        const tipoDestino = simbolo ? simbolo.type : null;
+
+        // Si no está declarado, error de uso
+        if (!simbolo) {
+          registrarError(
+            t.line,
+            t.column,
+            `Identificador "${nombre}" usado pero no declarado.`,
+            nombre
+          );
+        }
+
+        // Buscar tipo de la expresión de la derecha (muy simplificado)
+        let tipoFuente = null;
+        let j = i + 2;
+        while (j < tokens.length) {
+          const tt = tokens[j];
+
+          if (
+            tt.lexeme === ";" ||
+            tt.lexeme === ")" ||
+            tt.type === "PUNTO_COMA"
+          ) {
+            break;
+          }
+
+          const posibleTipo = tipoDesdeTokenValor(tt);
+          if (posibleTipo) {
+            tipoFuente = posibleTipo;
+            break;
+          }
+
+          j++;
+        }
+
+        if (tipoDestino && tipoFuente) {
+          if (tipoDestino !== tipoFuente) {
+            let msg;
+
+            if (tipoDestino === "integer" && tipoFuente === "string") {
+              msg = `Asignación incompatible: "${nombre}" es integer pero se le asigna un valor string.`;
+            } else if (tipoDestino === "integer" && tipoFuente === "real") {
+              msg = `Asignación incompatible: "${nombre}" es integer pero se le asigna un valor real.`;
+            } else {
+              msg = `Asignación incompatible en "${nombre}": no se puede asignar valor de tipo ${tipoFuente} a una variable de tipo ${tipoDestino}.`;
+            }
+
+            registrarError(
+              tokAsign.line,
+              tokAsign.column,
+              msg,
+              tokAsign.lexeme
+            );
+          }
+        }
+
+        // ya procesamos IDENTIFICADOR :=, saltamos el :=
+        i = i + 1;
+        continue;
+      }
+
+      // 2.2 Uso de identificador en expresión / llamado (no seguido de :=)
+      if (!simbolos.has(nombreLower)) {
+        registrarError(
+          t.line,
+          t.column,
+          `Identificador "${nombre}" usado pero no declarado.`,
+          nombre
+        );
+      }
+    }
+  }
+
+  return errores;
+}
+
+
   // ========= Análisis unificado =========
   let lastTokens = [];
-  function analyzeAll() {
-    const codigo = editor.getValue();
 
-    // 1) Prevalidación
-    const errsPre = prevalidar(codigo);
-    // 2) Tokenización (.45 patch)
-    const tokensMain = tokenizarPatched(codigo);
-    // 3) Post-validación (texto crudo)
-    const errsPost = postValidar(codigo);
-    // 4) Post-validación con tokens (punto aislado)
-    const errsTok = postValidarConTokens(tokensMain);
+// Modo de análisis:
+// true  -> SOLO léxico + semántico ligero (NO usa parser, no se traba)
+// false -> léxico + semántico ligero y, si no hay errores básicos, parser + semantic.js
+const SOLO_LEXICO_Y_SEM_LIGERO = false;
 
-    // 5) Convertir errores a tokens y unir
-    const ERR_CODE_LOCAL = TOKEN_CODES.ERROR || 99;
-    const tokens = [...tokensMain];
-    if (errsPre.length) {
-      tokens.unshift(
-        ...errsPre.map((e) => ({
-          type: "ERROR",
-          lexeme: "<prevalidación>",
-          line: e.line,
-          column: e.column,
-          code: ERR_CODE_LOCAL,
-          msg: e.msg,
-        }))
-      );
+  
+function analyzeAll() {
+  const codigo = editor.getValue();
+
+  // ========= 1) PREVALIDACIÓN (strings, comentarios, comentarios anidados, etc.) =========
+  const errsPre = prevalidar(codigo);
+
+  // ========= 2) TOKENIZACIÓN (.45 patch) =========
+  const tokensMain = tokenizarPatched(codigo);
+
+  // ========= 3) POST-VALIDACIÓN (regex y estructura superficial) =========
+  const errsPost = postValidar(codigo);
+
+  // ========= 4) POST-VALIDACIÓN CON TOKENS (cosas como "1 . 10") =========
+  const errsTok = postValidarConTokens(tokensMain);
+
+  // ========= 5) SEMÁNTICO LIGERO (por tokens, SIN AST) =========
+  const errsSemLigero = analizarSemantica(tokensMain);
+
+  // Errores básicos que siempre vamos a mostrar
+  const errsBasicos = [
+    ...errsPre,
+    ...errsPost,
+    ...errsTok,
+    ...errsSemLigero,
+  ];
+
+  // ========= 6) PARSER + SEMÁNTICO AST (OPCIONAL, SOLO MODO COMPLETO) =========
+  let ast = null;
+  let errsParser = [];
+  let errsSemAst = [];
+
+  // Solo intentamos parser si:
+  // - NO estamos en modo solo léxico
+  // - No hay errores básicos
+  const puedeIntentarParser =
+    !SOLO_LEXICO_Y_SEM_LIGERO &&
+    errsPre.length === 0 &&
+    errsPost.length === 0 &&
+    errsTok.length === 0 &&
+    errsSemLigero.length === 0;
+
+  if (puedeIntentarParser && window.ParserPascal) {
+    try {
+      const parser = new window.ParserPascal(tokensMain);
+      ast = parser.parseProgram();
+
+      if (parser.matchErrors && parser.matchErrors.length > 0) {
+        errsParser = parser.matchErrors;
+      }
+    } catch (e) {
+      errsParser.push({
+        line: e.line || 0,
+        column: e.column || 0,
+        msg: e.message || String(e),
+        lexeme: e.lexeme || "",
+      });
     }
-    if (errsPost.length || errsTok.length) {
-      tokens.push(
-        ...errsPost.concat(errsTok).map((e) => ({
-          type: "ERROR",
-          lexeme: e.lexeme ?? "<postvalidación>",
-          line: e.line,
-          column: e.column,
-          code: ERR_CODE_LOCAL,
-          msg: e.msg,
-        }))
-      );
-    }
-
-    // 6) Dedupe
-    const errsAll = errsPre.concat(errsPost, errsTok);
-    const errsMerged = dedupeErrObjs(errsAll);
-    const tokensDedup = dedupeErrorTokens(tokens);
-
-    // 7) Ordenar tokens para mostrar (errores arriba)
-    const tokensDisplay = sortTokensForDisplay(tokensDedup);
-
-    // 8) Render + marcas
-    renderTokens(tokensDisplay);
-    renderErrores(errsMerged);
-    markErrorsInEditor(tokensDedup, errsMerged);
-    lastTokens = tokensDedup;
   }
+
+  if (puedeIntentarParser && ast && window.analizarSemanticaAST) {
+    try {
+      const semErrs = window.analizarSemanticaAST(ast);
+      errsSemAst = semErrs || [];
+    } catch (e) {
+      errsSemAst.push({
+        line: e.line || 0,
+        column: e.column || 0,
+        msg: e.message || String(e),
+        lexeme: e.lexeme || "",
+      });
+    }
+  }
+
+  // ========= 7) UNIR TODOS LOS ERRORES =========
+  const errsAll = dedupeErrObjs([
+    ...errsBasicos,
+    ...errsParser,
+    ...errsSemAst,
+  ]);
+
+  // ========= 8) CONVERTIR ERRORES A TOKENS =========
+  const ERR_CODE_LOCAL = TOKEN_CODES.ERROR || 99;
+  const tokens = [...tokensMain];
+
+  // Prevalidación → se insertan al inicio
+  if (errsPre.length) {
+    tokens.unshift(
+      ...errsPre.map((e) => ({
+        type: "ERROR",
+        lexeme: "<prevalidación>",
+        line: e.line,
+        column: e.column,
+        code: ERR_CODE_LOCAL,
+        msg: e.msg,
+      }))
+    );
+  }
+
+  // Postvalidación + semántico ligero + (opcional) parser + semántico AST
+  const errsLater = [
+    ...errsPost,
+    ...errsTok,
+    ...errsSemLigero,
+    ...errsParser,
+    ...errsSemAst,
+  ];
+
+  if (errsLater.length) {
+    tokens.push(
+      ...errsLater.map((e) => ({
+        type: "ERROR",
+        lexeme: e.lexeme ?? "<post/semántica>",
+        line: e.line,
+        column: e.column,
+        code: ERR_CODE_LOCAL,
+        msg: e.msg,
+      }))
+    );
+  }
+
+  // ========= 9) QUITAR ERRORES DUPLICADOS EN TOKENS Y EN LISTA =========
+  const tokensDedup = dedupeErrorTokens(tokens);
+  const tokensDisplay = sortTokensForDisplay(tokensDedup);
+  const errsMerged = dedupeErrObjs(errsAll);
+
+  // ========= 10) RENDERIZAR TABLA DE TOKENS =========
+  renderTokens(tokensDisplay);
+
+  // ========= 11) RENDERIZAR LISTA DE ERRORES =========
+  renderErrores(errsMerged);
+
+  // ========= 12) MARCAR ERRORES EN CODEMIRROR =========
+  markErrorsInEditor(tokensDedup, errsMerged);
+
+  // Guardar última versión
+  lastTokens = tokensDedup;
+}
+
+
 
   // ========= Listeners =========
   $("btnAnalizar")?.addEventListener("click", analyzeAll);
@@ -1430,7 +1801,6 @@ end.`;
     if (event.target === modal) modal.style.display = "none";
   });
 
-  // Estilos mínimos para CodeMirror (marcas)
   const style = document.createElement("style");
   style.textContent = `
     .cm-pre-error { background: rgba(255, 80, 80, .07); }
